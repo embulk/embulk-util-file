@@ -18,6 +18,7 @@ package org.embulk.util.file;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 
 public class ResumableInputStream extends InputStream {
     public ResumableInputStream(final InputStream initialInputStream, final Reopener reopener) {
@@ -115,7 +116,7 @@ public class ResumableInputStream extends InputStream {
         try {
             this.ensureOpened();
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
         this.in.mark(readlimit);
         this.markedOffset = this.offset;
@@ -133,7 +134,7 @@ public class ResumableInputStream extends InputStream {
         try {
             this.ensureOpened();
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
         return this.in.markSupported();
     }

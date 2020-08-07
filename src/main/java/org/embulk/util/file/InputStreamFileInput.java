@@ -19,6 +19,7 @@ package org.embulk.util.file;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.Optional;
 import org.embulk.spi.Buffer;
@@ -118,7 +119,7 @@ public class InputStreamFileInput implements FileInput {
             this.current = this.provider.openNextWithHints();
             return this.current != null && this.current.getInputStream() != null;
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
     }
 
@@ -140,7 +141,7 @@ public class InputStreamFileInput implements FileInput {
             buffer = null;
             return b;
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         } finally {
             if (buffer != null) {
                 buffer.release();
@@ -161,7 +162,7 @@ public class InputStreamFileInput implements FileInput {
                 this.provider.close();
             }
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
     }
 

@@ -19,6 +19,7 @@ package org.embulk.util.file;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.FileOutput;
 
@@ -43,7 +44,7 @@ public class OutputStreamFileOutput implements FileOutput {
         try {
             this.current = this.provider.openNext();
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
     }
 
@@ -56,7 +57,7 @@ public class OutputStreamFileOutput implements FileOutput {
         try {
             this.current.write(buffer.array(), buffer.offset(), buffer.limit());
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         } finally {
             buffer.release();
         }
@@ -68,7 +69,7 @@ public class OutputStreamFileOutput implements FileOutput {
         try {
             this.provider.finish();
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
     }
 
@@ -80,7 +81,7 @@ public class OutputStreamFileOutput implements FileOutput {
             try {
                 this.provider.close();
             } catch (final IOException ex) {
-                throw new RuntimeException(ex);
+                throw new UncheckedIOException(ex);
             }
         }
     }
@@ -92,7 +93,7 @@ public class OutputStreamFileOutput implements FileOutput {
                 this.current = null;
             }
         } catch (final IOException ex) {
-            throw new RuntimeException(ex);
+            throw new UncheckedIOException(ex);
         }
     }
 
