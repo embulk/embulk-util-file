@@ -1,4 +1,4 @@
-package org.embulk.spi.util;
+package org.embulk.util.file;
 
 public enum Newline {
     CRLF("\r\n"),

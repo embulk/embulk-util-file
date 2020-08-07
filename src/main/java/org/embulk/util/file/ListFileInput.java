@@ -1,4 +1,4 @@
-package org.embulk.spi.util;
+package org.embulk.util.file;
 
 import java.util.Iterator;
 import org.embulk.spi.Buffer;

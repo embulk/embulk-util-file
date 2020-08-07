@@ -1,4 +1,4 @@
-package org.embulk.spi.util;
+package org.embulk.util.file;
 
 import java.io.InputStream;
 import org.embulk.spi.BufferAllocator;
