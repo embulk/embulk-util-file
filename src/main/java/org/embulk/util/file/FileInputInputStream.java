@@ -22,73 +22,78 @@ import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileInput;
 
 public class FileInputInputStream extends InputStream {
-    public FileInputInputStream(FileInput in) {
+    public FileInputInputStream(final FileInput in) {
+        this.pos = 0;
+        this.buffer = BufferImpl.EMPTY;
+
         this.in = in;
     }
 
     public boolean nextFile() {
-        releaseBuffer();
-        return in.nextFile();
+        this.releaseBuffer();
+        return this.in.nextFile();
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
     @Override
     public int read() {
-        while (pos >= buffer.limit()) {
-            if (!nextBuffer()) {
+        while (this.pos >= this.buffer.limit()) {
+            if (!this.nextBuffer()) {
                 return -1;
             }
         }
-        byte b = buffer.array()[buffer.offset() + pos];
-        pos++;
-        if (pos >= buffer.limit()) {
-            releaseBuffer();
+        final byte b = this.buffer.array()[this.buffer.offset() + this.pos];
+        this.pos++;
+        if (this.pos >= this.buffer.limit()) {
+            this.releaseBuffer();
         }
         return b & 0xff;
     }
 
     @Override
-    public int read(byte[] b, int off, int len) {
-        while (pos >= buffer.limit()) {
-            if (!nextBuffer()) {
+    public int read(final byte[] b, final int off, final int len) {
+        while (this.pos >= this.buffer.limit()) {
+            if (!this.nextBuffer()) {
                 return -1;
             }
         }
-        int remaining = buffer.limit() - pos;
-        boolean allConsumed;
+        final int remaining = this.buffer.limit() - this.pos;
+        final boolean allConsumed;
+        final int lengthToRead;
         if (remaining <= len) {
             allConsumed = true;
-            len = remaining;
+            lengthToRead = remaining;
         } else {
             allConsumed = false;
+            lengthToRead = len;
         }
         if (b != null) {
             // b == null if skip
-            buffer.getBytes(pos, b, off, len);
+            this.buffer.getBytes(this.pos, b, off, lengthToRead);
         }
         if (allConsumed) {
-            releaseBuffer();
+            this.releaseBuffer();
         } else {
-            pos += len;
+            this.pos += lengthToRead;
         }
-        return len;
+        return lengthToRead;
     }
 
     @Override
-    public long skip(long len) {
-        int skipped = read(null, 0, (int) Math.min(len, Integer.MAX_VALUE));
+    public long skip(final long len) {
+        final int skipped = this.read(null, 0, (int) Math.min(len, Integer.MAX_VALUE));
         return skipped > 0 ? skipped : 0;
     }
 
     @Override
     public int available() {
-        return buffer.limit() - pos;
+        return this.buffer.limit() - this.pos;
     }
 
     @Override
     public void close() {
-        releaseBuffer();
-        in.close();
+        this.releaseBuffer();
+        this.in.close();
     }
 
     @Override
@@ -97,23 +102,23 @@ public class FileInputInputStream extends InputStream {
     }
 
     private boolean nextBuffer() {
-        releaseBuffer();
-        Buffer b = in.poll();
+        this.releaseBuffer();
+        final Buffer b = this.in.poll();
         if (b == null) {
             return false;
         }
-        buffer = b;
+        this.buffer = b;
         return true;
     }
 
     private void releaseBuffer() {
-        buffer.release();
-        buffer = BufferImpl.EMPTY;
-        pos = 0;
+        this.buffer.release();
+        this.buffer = BufferImpl.EMPTY;
+        this.pos = 0;
     }
 
     private int pos;
-    private Buffer buffer = BufferImpl.EMPTY;
+    private Buffer buffer;
 
     private final FileInput in;
 }

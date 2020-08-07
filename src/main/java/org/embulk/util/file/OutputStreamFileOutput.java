@@ -23,39 +23,39 @@ import org.embulk.spi.Buffer;
 import org.embulk.spi.FileOutput;
 
 public class OutputStreamFileOutput implements FileOutput {
-    public OutputStreamFileOutput(Provider provider) {
+    public OutputStreamFileOutput(final Provider provider) {
         this.current = null;
 
         this.provider = provider;
     }
 
     public interface Provider extends Closeable {
-        public OutputStream openNext() throws IOException;
+        OutputStream openNext() throws IOException;
 
-        public void finish() throws IOException;
+        void finish() throws IOException;
 
-        public void close() throws IOException;
+        void close() throws IOException;
     }
 
     @Override
     public void nextFile() {
-        closeCurrent();
+        this.closeCurrent();
         try {
-            current = provider.openNext();
-        } catch (IOException ex) {
+            this.current = this.provider.openNext();
+        } catch (final IOException ex) {
             throw new RuntimeException(ex);
         }
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
     @Override
-    public void add(Buffer buffer) {
-        if (current == null) {
+    public void add(final Buffer buffer) {
+        if (this.current == null) {
             throw new IllegalStateException("nextFile() must be called before poll()");
         }
         try {
-            current.write(buffer.array(), buffer.offset(), buffer.limit());
-        } catch (IOException ex) {
+            this.current.write(buffer.array(), buffer.offset(), buffer.limit());
+        } catch (final IOException ex) {
             throw new RuntimeException(ex);
         } finally {
             buffer.release();
@@ -64,10 +64,10 @@ public class OutputStreamFileOutput implements FileOutput {
 
     @Override
     public void finish() {
-        closeCurrent();
+        this.closeCurrent();
         try {
-            provider.finish();
-        } catch (IOException ex) {
+            this.provider.finish();
+        } catch (final IOException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -75,11 +75,11 @@ public class OutputStreamFileOutput implements FileOutput {
     @Override
     public void close() {
         try {
-            closeCurrent();
+            this.closeCurrent();
         } finally {
             try {
-                provider.close();
-            } catch (IOException ex) {
+                this.provider.close();
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
@@ -87,11 +87,11 @@ public class OutputStreamFileOutput implements FileOutput {
 
     private void closeCurrent() {
         try {
-            if (current != null) {
-                current.close();
-                current = null;
+            if (this.current != null) {
+                this.current.close();
+                this.current = null;
             }
-        } catch (IOException ex) {
+        } catch (final IOException ex) {
             throw new RuntimeException(ex);
         }
     }

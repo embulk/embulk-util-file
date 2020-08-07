@@ -23,7 +23,8 @@ import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileOutput;
 
 public class FileOutputOutputStream extends OutputStream {
-    public FileOutputOutputStream(FileOutput out, BufferAllocator allocator, CloseMode closeMode) {
+    public FileOutputOutputStream(final FileOutput out, final BufferAllocator allocator, final CloseMode closeMode) {
+        this.pos = 0;
         this.buffer = allocator.allocate();
 
         this.out = out;
@@ -31,7 +32,7 @@ public class FileOutputOutputStream extends OutputStream {
         this.closeMode = closeMode;
     }
 
-    public static enum CloseMode {
+    public enum CloseMode {
         FLUSH,
         FLUSH_FINISH,
         FLUSH_FINISH_CLOSE,
@@ -40,39 +41,42 @@ public class FileOutputOutputStream extends OutputStream {
     }
 
     public void nextFile() {
-        out.nextFile();
+        this.out.nextFile();
     }
 
     public void finish() {
-        doFlush();
-        out.finish();
+        this.doFlush();
+        this.out.finish();
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
     @Override
-    public void write(int b) {
-        buffer.array()[buffer.offset() + pos] = (byte) b;
-        pos++;
-        if (pos >= buffer.capacity()) {
-            flush();
+    public void write(final int b) {
+        this.buffer.array()[this.buffer.offset() + this.pos] = (byte) b;
+        this.pos++;
+        if (this.pos >= this.buffer.capacity()) {
+            this.flush();
         }
     }
 
     @Override
-    public void write(byte[] b, int off, int len) {
+    public void write(final byte[] b, final int off, final int len) {
+        int cursor = off;
+        int lengthRemaining = len;
+
         while (true) {
-            int available = buffer.capacity() - pos;
-            if (available < len) {
-                buffer.setBytes(pos, b, off, available);
-                pos += available;
-                len -= available;
-                off += available;
-                flush();
+            final int available = this.buffer.capacity() - this.pos;
+            if (available < lengthRemaining) {
+                this.buffer.setBytes(this.pos, b, cursor, available);
+                this.pos += available;
+                lengthRemaining -= available;
+                cursor += available;
+                this.flush();
             } else {
-                buffer.setBytes(pos, b, off, len);
-                pos += len;
-                if (available <= len) {
-                    flush();
+                this.buffer.setBytes(this.pos, b, cursor, lengthRemaining);
+                this.pos += lengthRemaining;
+                if (available <= lengthRemaining) {
+                    this.flush();
                 }
                 break;
             }
@@ -80,11 +84,11 @@ public class FileOutputOutputStream extends OutputStream {
     }
 
     private boolean doFlush() {
-        if (pos > 0) {
-            buffer.limit(pos);
-            out.add(buffer);
-            buffer = BufferImpl.EMPTY;
-            pos = 0;
+        if (this.pos > 0) {
+            this.buffer.limit(this.pos);
+            this.out.add(this.buffer);
+            this.buffer = BufferImpl.EMPTY;
+            this.pos = 0;
             return true;
         }
         return false;
@@ -92,34 +96,34 @@ public class FileOutputOutputStream extends OutputStream {
 
     @Override
     public void flush() {
-        if (doFlush()) {
-            buffer = allocator.allocate();
+        if (this.doFlush()) {
+            this.buffer = this.allocator.allocate();
         }
     }
 
     @Override
     public void close() {
-        switch (closeMode) {
+        switch (this.closeMode) {
             case FLUSH:
-                doFlush();
+                this.doFlush();
                 break;
             case FLUSH_FINISH:
-                doFlush();
-                out.finish();
+                this.doFlush();
+                this.out.finish();
                 break;
             case FLUSH_FINISH_CLOSE:
-                doFlush();
-                out.finish();
-                out.close();
+                this.doFlush();
+                this.out.finish();
+                this.out.close();
                 break;
             case CLOSE:
-                out.close();
+                this.out.close();
                 break;
             default:  // Never default as all enums are listed.
         }
-        buffer.release();
-        buffer = BufferImpl.EMPTY;
-        pos = 0;
+        this.buffer.release();
+        this.buffer = BufferImpl.EMPTY;
+        this.pos = 0;
     }
 
     private int pos;
