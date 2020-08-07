@@ -19,9 +19,12 @@ configurations {
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {
+    compileOnly "org.embulk:embulk-api:0.10.7"
+    compileOnly "org.embulk:embulk-core:0.10.7"
 }
 
 tasks.withType(JavaCompile) {
