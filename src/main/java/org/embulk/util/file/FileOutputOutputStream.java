@@ -23,24 +23,20 @@ import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileOutput;
 
 public class FileOutputOutputStream extends OutputStream {
-    private final FileOutput out;
-    private final BufferAllocator allocator;
-    private final CloseMode closeMode;
-    private int pos;
-    private Buffer buffer;
+    public FileOutputOutputStream(FileOutput out, BufferAllocator allocator, CloseMode closeMode) {
+        this.buffer = allocator.allocate();
+
+        this.out = out;
+        this.allocator = allocator;
+        this.closeMode = closeMode;
+    }
 
     public static enum CloseMode {
         FLUSH,
         FLUSH_FINISH,
         FLUSH_FINISH_CLOSE,
-        CLOSE;
-    }
-
-    public FileOutputOutputStream(FileOutput out, BufferAllocator allocator, CloseMode closeMode) {
-        this.out = out;
-        this.allocator = allocator;
-        this.buffer = allocator.allocate();
-        this.closeMode = closeMode;
+        CLOSE,
+        ;
     }
 
     public void nextFile() {
@@ -125,4 +121,11 @@ public class FileOutputOutputStream extends OutputStream {
         buffer = BufferImpl.EMPTY;
         pos = 0;
     }
+
+    private int pos;
+    private Buffer buffer;
+
+    private final FileOutput out;
+    private final BufferAllocator allocator;
+    private final CloseMode closeMode;
 }

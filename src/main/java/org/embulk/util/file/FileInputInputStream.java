@@ -22,26 +22,13 @@ import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileInput;
 
 public class FileInputInputStream extends InputStream {
-    private final FileInput in;
-    private int pos;
-    private Buffer buffer = BufferImpl.EMPTY;
-
     public FileInputInputStream(FileInput in) {
         this.in = in;
-    }
-
-    public boolean markSupported() {
-        return false;
     }
 
     public boolean nextFile() {
         releaseBuffer();
         return in.nextFile();
-    }
-
-    @Override
-    public int available() {
-        return buffer.limit() - pos;
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
@@ -93,6 +80,22 @@ public class FileInputInputStream extends InputStream {
         return skipped > 0 ? skipped : 0;
     }
 
+    @Override
+    public int available() {
+        return buffer.limit() - pos;
+    }
+
+    @Override
+    public void close() {
+        releaseBuffer();
+        in.close();
+    }
+
+    @Override
+    public boolean markSupported() {
+        return false;
+    }
+
     private boolean nextBuffer() {
         releaseBuffer();
         Buffer b = in.poll();
@@ -109,9 +112,8 @@ public class FileInputInputStream extends InputStream {
         pos = 0;
     }
 
-    @Override
-    public void close() {
-        releaseBuffer();
-        in.close();
-    }
+    private int pos;
+    private Buffer buffer = BufferImpl.EMPTY;
+
+    private final FileInput in;
 }

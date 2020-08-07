@@ -23,6 +23,12 @@ import org.embulk.spi.Buffer;
 import org.embulk.spi.FileOutput;
 
 public class OutputStreamFileOutput implements FileOutput {
+    public OutputStreamFileOutput(Provider provider) {
+        this.current = null;
+
+        this.provider = provider;
+    }
+
     public interface Provider extends Closeable {
         public OutputStream openNext() throws IOException;
 
@@ -31,14 +37,7 @@ public class OutputStreamFileOutput implements FileOutput {
         public void close() throws IOException;
     }
 
-    private final Provider provider;
-    private OutputStream current;
-
-    public OutputStreamFileOutput(Provider provider) {
-        this.provider = provider;
-        this.current = null;
-    }
-
+    @Override
     public void nextFile() {
         closeCurrent();
         try {
@@ -49,6 +48,7 @@ public class OutputStreamFileOutput implements FileOutput {
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
+    @Override
     public void add(Buffer buffer) {
         if (current == null) {
             throw new IllegalStateException("nextFile() must be called before poll()");
@@ -62,6 +62,7 @@ public class OutputStreamFileOutput implements FileOutput {
         }
     }
 
+    @Override
     public void finish() {
         closeCurrent();
         try {
@@ -71,6 +72,7 @@ public class OutputStreamFileOutput implements FileOutput {
         }
     }
 
+    @Override
     public void close() {
         try {
             closeCurrent();
@@ -93,4 +95,8 @@ public class OutputStreamFileOutput implements FileOutput {
             throw new RuntimeException(ex);
         }
     }
+
+    private OutputStream current;
+
+    private final Provider provider;
 }

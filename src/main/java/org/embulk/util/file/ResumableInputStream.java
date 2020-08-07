@@ -20,41 +20,22 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class ResumableInputStream extends InputStream {
-    public interface Reopener {
-        public InputStream reopen(long offset, Exception closedCause) throws IOException;
-    }
-
-    private final Reopener reopener;
-    protected InputStream in;
-    private long offset;
-    private long markedOffset;
-    private Exception lastClosedCause;
-    private boolean closed;
-
     public ResumableInputStream(InputStream initialInputStream, Reopener reopener) {
-        this.reopener = reopener;
         this.in = initialInputStream;
+
         this.offset = 0L;
         this.markedOffset = 0L;
         this.lastClosedCause = null;
+
+        this.reopener = reopener;
     }
 
     public ResumableInputStream(Reopener reopener) throws IOException {
         this(reopener.reopen(0, null), reopener);
     }
 
-    private void reopen(Exception closedCause) throws IOException {
-        if (in != null) {
-            lastClosedCause = closedCause;
-            try {
-                in.close();
-            } catch (IOException ignored) {
-                // Passing through intentionally.
-            }
-            in = null;
-        }
-        in = reopener.reopen(offset, closedCause);
-        lastClosedCause = null;
+    public interface Reopener {
+        public InputStream reopen(long offset, Exception closedCause) throws IOException;
     }
 
     @Override
@@ -156,6 +137,20 @@ public class ResumableInputStream extends InputStream {
         return in.markSupported();
     }
 
+    private void reopen(Exception closedCause) throws IOException {
+        if (in != null) {
+            lastClosedCause = closedCause;
+            try {
+                in.close();
+            } catch (IOException ignored) {
+                // Passing through intentionally.
+            }
+            in = null;
+        }
+        in = reopener.reopen(offset, closedCause);
+        lastClosedCause = null;
+    }
+
     private void ensureOpened() throws IOException {
         if (in == null) {
             if (closed) {
@@ -164,4 +159,13 @@ public class ResumableInputStream extends InputStream {
             reopen(lastClosedCause);
         }
     }
+
+    protected InputStream in;
+
+    private long offset;
+    private long markedOffset;
+    private Exception lastClosedCause;
+    private boolean closed;
+
+    private final Reopener reopener;
 }

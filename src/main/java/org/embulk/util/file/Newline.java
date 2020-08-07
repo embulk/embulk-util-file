@@ -19,11 +19,8 @@ package org.embulk.util.file;
 public enum Newline {
     CRLF("\r\n"),
     LF("\n"),
-    CR("\r");
-
-    private final String string;
-    private final char firstCharCode;
-    private final char secondCharCode;
+    CR("\r"),
+    ;
 
     private Newline(String string) {
         this.string = string;
@@ -46,4 +43,8 @@ public enum Newline {
     public char getSecondCharCode() {
         return secondCharCode;
     }
+
+    private final String string;
+    private final char firstCharCode;
+    private final char secondCharCode;
 }
