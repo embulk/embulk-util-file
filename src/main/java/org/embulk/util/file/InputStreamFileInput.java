@@ -49,7 +49,8 @@ public class InputStreamFileInput implements FileInput {
 
         default InputStream openNext() throws IOException {
             throw new UnsupportedOperationException(
-                    "Provider#openNext must be implemented unless Provider#openNextWithHints is implemented.");
+                    "InputStreamFileInput.Provider#openNext must be implemented"
+                    + " unless InputStreamFileInput.Provider#openNextWithHints is implemented.");
         }
 
         void close() throws IOException;
@@ -127,7 +128,7 @@ public class InputStreamFileInput implements FileInput {
     @Override
     public Buffer poll() {
         if (this.current == null || this.current.getInputStream() == null) {
-            throw new IllegalStateException("nextFile() must be called before poll()");
+            throw new IllegalStateException("InputStreamFileInput#nextFile() must be called before poll().");
         }
         // TODO: Clean it up and "final".
         Buffer buffer = this.allocator.allocate();

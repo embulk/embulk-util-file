@@ -37,7 +37,7 @@ public class ListFileInput implements FileInput {
     @Override
     public Buffer poll() {
         if (this.currentBuffers == null) {
-            throw new IllegalStateException("FileInput.nextFile is not called");
+            throw new IllegalStateException("FileInput#nextFile() is not called.");
         }
         if (!this.currentBuffers.hasNext()) {
             return null;

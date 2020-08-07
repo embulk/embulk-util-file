@@ -52,7 +52,7 @@ public class OutputStreamFileOutput implements FileOutput {
     @Override
     public void add(final Buffer buffer) {
         if (this.current == null) {
-            throw new IllegalStateException("nextFile() must be called before poll()");
+            throw new IllegalStateException("OutputStreamFileOutput#nextFile() must be called before poll().");
         }
         try {
             this.current.write(buffer.array(), buffer.offset(), buffer.limit());

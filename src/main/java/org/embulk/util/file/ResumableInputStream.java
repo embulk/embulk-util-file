@@ -156,7 +156,7 @@ public class ResumableInputStream extends InputStream {
     private void ensureOpened() throws IOException {
         if (this.in == null) {
             if (this.closed) {
-                throw new IOException("stream closed");
+                throw new IOException("InputStream in ResumableInputStream is unexpectedly closed.");
             }
             this.reopen(this.lastClosedCause);
         }
