@@ -1,0 +1,134 @@
+plugins {
+    id "java"
+    id "java-library"
+    id "maven-publish"
+    id "signing"
+}
+
+group = "org.embulk"
+version = "0.1.0-SNAPSHOT"
+description = "Embulk file-like byte sequence processor for Embulk plugins"
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+configurations {
+    compileClasspath.resolutionStrategy.activateDependencyLocking()
+    runtimeClasspath.resolutionStrategy.activateDependencyLocking()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    options.encoding = "UTF-8"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+javadoc {
+    title = "${project.name} v${project.version}"
+
+    options {
+        locale = "en_US"
+        encoding = "UTF-8"
+        links "https://docs.oracle.com/javase/8/docs/api/"
+    }
+}
+
+test {
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "${project.group}"
+            artifactId = "${project.name}"
+
+            from components.java
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+
+                name = "${project.name}"
+                description = "${project.description}"
+                url = "https://www.embulk.org/"
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                    developer {
+                        name = "Sadayuki Furuhashi"
+                        email = "frsyuki@gmail.com"
+                    }
+                    developer {
+                        name = "Dai MIKURUBE"
+                        email = "dmikurube@treasure-data.com"
+                    }
+                    developer {
+                        name = "Satoshi Akama"
+                        email = "satoshiakama@gmail.com"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/embulk/embulk-util-file.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-util-file.git"
+                    url = "https://github.com/embulk/embulk-util-file"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
