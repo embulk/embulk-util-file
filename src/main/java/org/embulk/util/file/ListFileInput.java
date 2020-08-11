@@ -21,40 +21,44 @@ import org.embulk.spi.Buffer;
 import org.embulk.spi.FileInput;
 
 public class ListFileInput implements FileInput {
-    private Iterator<? extends Iterable<Buffer>> files;
-    private Iterator<Buffer> currentBuffers;
-
-    public ListFileInput(Iterable<? extends Iterable<Buffer>> files) {
+    public ListFileInput(final Iterable<? extends Iterable<Buffer>> files) {
         this.files = files.iterator();
     }
 
+    @Override
     public boolean nextFile() {
-        if (!files.hasNext()) {
+        if (!this.files.hasNext()) {
             return false;
         }
-        currentBuffers = files.next().iterator();
+        this.currentBuffers = this.files.next().iterator();
         return true;
     }
 
+    @Override
     public Buffer poll() {
-        if (currentBuffers == null) {
-            throw new IllegalStateException("FileInput.nextFile is not called");
+        if (this.currentBuffers == null) {
+            throw new IllegalStateException("FileInput#nextFile() is not called.");
         }
-        if (!currentBuffers.hasNext()) {
+        if (!this.currentBuffers.hasNext()) {
             return null;
         }
-        return currentBuffers.next();
+        return this.currentBuffers.next();
     }
 
+    @Override
     public void close() {
         do {
             while (true) {
-                Buffer b = poll();
+                final Buffer b = this.poll();
                 if (b == null) {
                     break;
                 }
                 b.release();
             }
-        } while (nextFile());
+        } while (this.nextFile());
     }
+
+    private Iterator<Buffer> currentBuffers;
+
+    private final Iterator<? extends Iterable<Buffer>> files;
 }

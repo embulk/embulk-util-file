@@ -19,78 +19,85 @@ package org.embulk.util.file;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.FileOutput;
 
 public class OutputStreamFileOutput implements FileOutput {
-    public interface Provider extends Closeable {
-        public OutputStream openNext() throws IOException;
-
-        public void finish() throws IOException;
-
-        public void close() throws IOException;
-    }
-
-    private final Provider provider;
-    private OutputStream current;
-
-    public OutputStreamFileOutput(Provider provider) {
-        this.provider = provider;
+    public OutputStreamFileOutput(final Provider provider) {
         this.current = null;
+
+        this.provider = provider;
     }
 
+    public interface Provider extends Closeable {
+        OutputStream openNext() throws IOException;
+
+        void finish() throws IOException;
+
+        void close() throws IOException;
+    }
+
+    @Override
     public void nextFile() {
-        closeCurrent();
+        this.closeCurrent();
         try {
-            current = provider.openNext();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            this.current = this.provider.openNext();
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
-    public void add(Buffer buffer) {
-        if (current == null) {
-            throw new IllegalStateException("nextFile() must be called before poll()");
+    @Override
+    public void add(final Buffer buffer) {
+        if (this.current == null) {
+            throw new IllegalStateException("OutputStreamFileOutput#nextFile() must be called before poll().");
         }
         try {
-            current.write(buffer.array(), buffer.offset(), buffer.limit());
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            this.current.write(buffer.array(), buffer.offset(), buffer.limit());
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         } finally {
             buffer.release();
         }
     }
 
+    @Override
     public void finish() {
-        closeCurrent();
+        this.closeCurrent();
         try {
-            provider.finish();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            this.provider.finish();
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 
+    @Override
     public void close() {
         try {
-            closeCurrent();
+            this.closeCurrent();
         } finally {
             try {
-                provider.close();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
+                this.provider.close();
+            } catch (final IOException ex) {
+                throw new UncheckedIOException(ex);
             }
         }
     }
 
     private void closeCurrent() {
         try {
-            if (current != null) {
-                current.close();
-                current = null;
+            if (this.current != null) {
+                this.current.close();
+                this.current = null;
             }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
+
+    private OutputStream current;
+
+    private final Provider provider;
 }

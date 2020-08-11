@@ -21,15 +21,15 @@ import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.TransactionalFileInput;
 
 public abstract class InputStreamTransactionalFileInput extends InputStreamFileInput implements TransactionalFileInput {
-    public InputStreamTransactionalFileInput(BufferAllocator allocator, Provider provider) {
+    public InputStreamTransactionalFileInput(final BufferAllocator allocator, final Provider provider) {
         super(allocator, provider);
     }
 
-    public InputStreamTransactionalFileInput(BufferAllocator allocator, Opener opener) {
+    public InputStreamTransactionalFileInput(final BufferAllocator allocator, final Opener opener) {
         super(allocator, opener);
     }
 
-    public InputStreamTransactionalFileInput(BufferAllocator allocator, InputStream openedStream) {
+    public InputStreamTransactionalFileInput(final BufferAllocator allocator, final InputStream openedStream) {
         super(allocator, openedStream);
     }
 }

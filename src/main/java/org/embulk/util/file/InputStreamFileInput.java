@@ -19,6 +19,7 @@ package org.embulk.util.file;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.Optional;
 import org.embulk.spi.Buffer;
@@ -26,6 +27,66 @@ import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.FileInput;
 
 public class InputStreamFileInput implements FileInput {
+    public InputStreamFileInput(final BufferAllocator allocator, final Provider provider) {
+        this.current = null;
+
+        this.allocator = allocator;
+        this.provider = provider;
+    }
+
+    public InputStreamFileInput(final BufferAllocator allocator, final Opener opener) {
+        this(allocator, new OpenerProvider(opener));
+    }
+
+    public InputStreamFileInput(final BufferAllocator allocator, final InputStream openedStream) {
+        this(allocator, new InputStreamProvider(openedStream));
+    }
+
+    public interface Provider extends Closeable {
+        default InputStreamWithHints openNextWithHints() throws IOException {
+            return new InputStreamWithHints(this.openNext());
+        }
+
+        default InputStream openNext() throws IOException {
+            throw new UnsupportedOperationException(
+                    "InputStreamFileInput.Provider#openNext must be implemented"
+                    + " unless InputStreamFileInput.Provider#openNextWithHints is implemented.");
+        }
+
+        void close() throws IOException;
+    }
+
+    public interface Opener {
+        InputStream open() throws IOException;
+    }
+
+    public static class IteratorProvider implements Provider {
+        public IteratorProvider(final Iterable<InputStream> iterable) {
+            this.iterator = iterable.iterator();
+        }
+
+        public IteratorProvider(final Iterator<InputStream> iterator) {
+            this.iterator = iterator;
+        }
+
+        @Override
+        public InputStream openNext() throws IOException {
+            if (!this.iterator.hasNext()) {
+                return null;
+            }
+            return this.iterator.next();
+        }
+
+        @Override
+        public void close() throws IOException {
+            while (this.iterator.hasNext()) {
+                this.iterator.next().close();
+            }
+        }
+
+        private final Iterator<InputStream> iterator;
+    }
+
     public static class InputStreamWithHints {
         public InputStreamWithHints(final InputStream inputStream, final String hintOfCurrentInputFileNameForLogging) {
             this.inputStream = inputStream;
@@ -49,123 +110,30 @@ public class InputStreamFileInput implements FileInput {
         private final Optional<String> hintOfCurrentInputFileNameForLogging;
     }
 
-    public interface Provider extends Closeable {
-        default InputStreamWithHints openNextWithHints() throws IOException {
-            return new InputStreamWithHints(this.openNext());
-        }
-
-        default InputStream openNext() throws IOException {
-            throw new UnsupportedOperationException(
-                    "Provider#openNext must be implemented unless Provider#openNextWithHints is implemented.");
-        }
-
-        public void close() throws IOException;
-    }
-
-    public interface Opener {
-        public InputStream open() throws IOException;
-    }
-
-    public static class IteratorProvider implements Provider {
-        private Iterator<InputStream> iterator;
-
-        public IteratorProvider(Iterable<InputStream> iterable) {
-            this.iterator = iterable.iterator();
-        }
-
-        public IteratorProvider(Iterator<InputStream> iterator) {
-            this.iterator = iterator;
-        }
-
-        @Override
-        public InputStream openNext() throws IOException {
-            if (!iterator.hasNext()) {
-                return null;
+    @Override
+    public boolean nextFile() {
+        try {
+            if (this.current != null && this.current.getInputStream() != null) {
+                this.current.getInputStream().close();
+                this.current = null;
             }
-            return iterator.next();
+            this.current = this.provider.openNextWithHints();
+            return this.current != null && this.current.getInputStream() != null;
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
-
-        @Override
-        public void close() throws IOException {
-            while (iterator.hasNext()) {
-                iterator.next().close();
-            }
-        }
-    }
-
-    private static class OpenerProvider implements Provider {
-        private Opener opener;
-
-        public OpenerProvider(Opener opener) {
-            this.opener = opener;
-        }
-
-        @Override
-        public InputStream openNext() throws IOException {
-            if (opener == null) {
-                return null;
-            }
-            InputStream stream = opener.open();
-            opener = null;
-            return stream;
-        }
-
-        @Override
-        public void close() throws IOException {}
-    }
-
-    private static class InputStreamProvider implements Provider {
-        private InputStream input;
-
-        public InputStreamProvider(InputStream input) {
-            this.input = input;
-        }
-
-        @Override
-        public InputStream openNext() throws IOException {
-            if (input == null) {
-                return null;
-            }
-            InputStream ret = input;
-            input = null;
-            return ret;
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (input != null) {
-                input.close();
-                input = null;
-            }
-        }
-    }
-
-    private final BufferAllocator allocator;
-    private final Provider provider;
-    private InputStreamWithHints current;
-
-    public InputStreamFileInput(BufferAllocator allocator, Provider provider) {
-        this.allocator = allocator;
-        this.provider = provider;
-        this.current = null;
-    }
-
-    public InputStreamFileInput(BufferAllocator allocator, Opener opener) {
-        this(allocator, new OpenerProvider(opener));
-    }
-
-    public InputStreamFileInput(BufferAllocator allocator, InputStream openedStream) {
-        this(allocator, new InputStreamProvider(openedStream));
     }
 
     @SuppressWarnings("deprecation")  // Calling Buffer#array().
+    @Override
     public Buffer poll() {
-        if (current == null || current.getInputStream() == null) {
-            throw new IllegalStateException("nextFile() must be called before poll()");
+        if (this.current == null || this.current.getInputStream() == null) {
+            throw new IllegalStateException("InputStreamFileInput#nextFile() must be called before poll().");
         }
-        Buffer buffer = allocator.allocate();
+        // TODO: Clean it up and "final".
+        Buffer buffer = this.allocator.allocate();
         try {
-            int n = current.getInputStream().read(buffer.array(), buffer.offset(), buffer.capacity());
+            final int n = this.current.getInputStream().read(buffer.array(), buffer.offset(), buffer.capacity());
             if (n < 0) {
                 return null;
             }
@@ -173,8 +141,8 @@ public class InputStreamFileInput implements FileInput {
             Buffer b = buffer;
             buffer = null;
             return b;
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         } finally {
             if (buffer != null) {
                 buffer.release();
@@ -183,31 +151,19 @@ public class InputStreamFileInput implements FileInput {
         }
     }
 
-    public boolean nextFile() {
-        try {
-            if (current != null && current.getInputStream() != null) {
-                current.getInputStream().close();
-                current = null;
-            }
-            current = provider.openNextWithHints();
-            return current != null && current.getInputStream() != null;
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
+    @Override
     public void close() {
         try {
             try {
-                if (current != null && current.getInputStream() != null) {
-                    current.getInputStream().close();
-                    current = null;
+                if (this.current != null && this.current.getInputStream() != null) {
+                    this.current.getInputStream().close();
+                    this.current = null;
                 }
             } finally {
-                provider.close();
+                this.provider.close();
             }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 
@@ -217,10 +173,62 @@ public class InputStreamFileInput implements FileInput {
     }
 
     protected final Optional<String> getHintOfCurrentInputFileNameForLogging() {
-        if (current != null) {
-            return current.getHintOfCurrentInputFileNameForLogging();
+        if (this.current != null) {
+            return this.current.getHintOfCurrentInputFileNameForLogging();
         } else {
             return Optional.empty();
         }
     }
+
+    private static class OpenerProvider implements Provider {
+        public OpenerProvider(final Opener opener) {
+            this.opener = opener;
+        }
+
+        @Override
+        public InputStream openNext() throws IOException {
+            if (this.opener == null) {
+                return null;
+            }
+            final InputStream stream = this.opener.open();
+            this.opener = null;
+            return stream;
+        }
+
+        @Override
+        public void close() throws IOException {}
+
+        private Opener opener;
+    }
+
+    private static class InputStreamProvider implements Provider {
+        public InputStreamProvider(final InputStream input) {
+            this.input = input;
+        }
+
+        @Override
+        public InputStream openNext() throws IOException {
+            if (this.input == null) {
+                return null;
+            }
+            final InputStream ret = this.input;
+            this.input = null;
+            return ret;
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (this.input != null) {
+                this.input.close();
+                this.input = null;
+            }
+        }
+
+        private InputStream input;
+    }
+
+    private InputStreamWithHints current;
+
+    private final BufferAllocator allocator;
+    private final Provider provider;
 }

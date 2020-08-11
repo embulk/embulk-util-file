@@ -18,150 +18,156 @@ package org.embulk.util.file;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 
 public class ResumableInputStream extends InputStream {
-    public interface Reopener {
-        public InputStream reopen(long offset, Exception closedCause) throws IOException;
-    }
-
-    private final Reopener reopener;
-    protected InputStream in;
-    private long offset;
-    private long markedOffset;
-    private Exception lastClosedCause;
-    private boolean closed;
-
-    public ResumableInputStream(InputStream initialInputStream, Reopener reopener) {
-        this.reopener = reopener;
+    public ResumableInputStream(final InputStream initialInputStream, final Reopener reopener) {
         this.in = initialInputStream;
+
         this.offset = 0L;
         this.markedOffset = 0L;
         this.lastClosedCause = null;
+        this.closed = false;
+
+        this.reopener = reopener;
     }
 
-    public ResumableInputStream(Reopener reopener) throws IOException {
+    public ResumableInputStream(final Reopener reopener) throws IOException {
         this(reopener.reopen(0, null), reopener);
     }
 
-    private void reopen(Exception closedCause) throws IOException {
-        if (in != null) {
-            lastClosedCause = closedCause;
-            try {
-                in.close();
-            } catch (IOException ignored) {
-                // Passing through intentionally.
-            }
-            in = null;
-        }
-        in = reopener.reopen(offset, closedCause);
-        lastClosedCause = null;
+    public interface Reopener {
+        InputStream reopen(long offset, Exception closedCause) throws IOException;
     }
 
     @Override
     public int read() throws IOException {
-        ensureOpened();
+        this.ensureOpened();
         while (true) {
             try {
-                int v = in.read();
-                offset += 1;
+                final int v = this.in.read();
+                this.offset += 1;
                 return v;
-            } catch (IOException | RuntimeException ex) {
-                reopen(ex);
+            } catch (final IOException | RuntimeException ex) {
+                this.reopen(ex);
             }
         }
     }
 
     @Override
-    public int read(byte[] b) throws IOException {
-        ensureOpened();
+    public int read(final byte[] b) throws IOException {
+        this.ensureOpened();
         while (true) {
             try {
-                int r = in.read(b);
-                offset += r;
+                final int r = in.read(b);
+                this.offset += r;
                 return r;
-            } catch (IOException | RuntimeException ex) {
-                reopen(ex);
+            } catch (final IOException | RuntimeException ex) {
+                this.reopen(ex);
             }
         }
     }
 
     @Override
-    public int read(byte[] b, int off, int len) throws IOException {
-        ensureOpened();
+    public int read(final byte[] b, final int off, final int len) throws IOException {
+        this.ensureOpened();
         while (true) {
             try {
-                int r = in.read(b, off, len);
-                offset += r;
+                final int r = in.read(b, off, len);
+                this.offset += r;
                 return r;
-            } catch (IOException | RuntimeException ex) {
-                reopen(ex);
+            } catch (final IOException | RuntimeException ex) {
+                this.reopen(ex);
             }
         }
     }
 
     @Override
-    public long skip(long n) throws IOException {
-        ensureOpened();
+    public long skip(final long n) throws IOException {
+        this.ensureOpened();
         while (true) {
             try {
-                long r = in.skip(n);
-                offset += r;
+                final long r = in.skip(n);
+                this.offset += r;
                 return r;
-            } catch (IOException | RuntimeException ex) {
-                reopen(ex);
+            } catch (final IOException | RuntimeException ex) {
+                this.reopen(ex);
             }
         }
     }
 
     @Override
     public int available() throws IOException {
-        ensureOpened();
-        return in.available();
+        this.ensureOpened();
+        return this.in.available();
     }
 
     @Override
     public void close() throws IOException {
-        if (in != null) {
-            in.close();
-            closed = true;
-            in = null;
+        if (this.in != null) {
+            this.in.close();
+            this.closed = true;
+            this.in = null;
         }
     }
 
     @Override
-    public void mark(int readlimit) {
+    public void mark(final int readlimit) {
         try {
-            ensureOpened();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            this.ensureOpened();
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
-        in.mark(readlimit);
-        markedOffset = offset;
+        this.in.mark(readlimit);
+        this.markedOffset = this.offset;
     }
 
     @Override
     public void reset() throws IOException {
-        ensureOpened();
-        in.reset();
-        offset = markedOffset;
+        this.ensureOpened();
+        this.in.reset();
+        this.offset = this.markedOffset;
     }
 
     @Override
     public boolean markSupported() {
         try {
-            ensureOpened();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            this.ensureOpened();
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
-        return in.markSupported();
+        return this.in.markSupported();
+    }
+
+    private void reopen(final Exception closedCause) throws IOException {
+        if (this.in != null) {
+            this.lastClosedCause = closedCause;
+            try {
+                this.in.close();
+            } catch (final IOException ignored) {
+                // Passing through intentionally.
+            }
+            this.in = null;
+        }
+        this.in = this.reopener.reopen(this.offset, closedCause);
+        this.lastClosedCause = null;
     }
 
     private void ensureOpened() throws IOException {
-        if (in == null) {
-            if (closed) {
-                throw new IOException("stream closed");
+        if (this.in == null) {
+            if (this.closed) {
+                throw new IOException("InputStream in ResumableInputStream is unexpectedly closed.");
             }
-            reopen(lastClosedCause);
+            this.reopen(this.lastClosedCause);
         }
     }
+
+    protected InputStream in;
+
+    private long offset;
+    private long markedOffset;
+    private Exception lastClosedCause;
+    private boolean closed;
+
+    private final Reopener reopener;
 }
