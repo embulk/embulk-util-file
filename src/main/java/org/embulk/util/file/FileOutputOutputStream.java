@@ -19,7 +19,6 @@ package org.embulk.util.file;
 import java.io.OutputStream;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.BufferAllocator;
-import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileOutput;
 
 public class FileOutputOutputStream extends OutputStream {
@@ -87,7 +86,7 @@ public class FileOutputOutputStream extends OutputStream {
         if (this.pos > 0) {
             this.buffer.limit(this.pos);
             this.out.add(this.buffer);
-            this.buffer = BufferImpl.EMPTY;
+            this.buffer = EmptyBuffer.INSTANCE;
             this.pos = 0;
             return true;
         }
@@ -122,7 +121,7 @@ public class FileOutputOutputStream extends OutputStream {
             default:  // Never default as all enums are listed.
         }
         this.buffer.release();
-        this.buffer = BufferImpl.EMPTY;
+        this.buffer = EmptyBuffer.INSTANCE;
         this.pos = 0;
     }
 

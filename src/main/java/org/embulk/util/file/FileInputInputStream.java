@@ -18,13 +18,12 @@ package org.embulk.util.file;
 
 import java.io.InputStream;
 import org.embulk.spi.Buffer;
-import org.embulk.spi.BufferImpl;
 import org.embulk.spi.FileInput;
 
 public class FileInputInputStream extends InputStream {
     public FileInputInputStream(final FileInput in) {
         this.pos = 0;
-        this.buffer = BufferImpl.EMPTY;
+        this.buffer = EmptyBuffer.INSTANCE;
 
         this.in = in;
     }
@@ -113,7 +112,7 @@ public class FileInputInputStream extends InputStream {
 
     private void releaseBuffer() {
         this.buffer.release();
-        this.buffer = BufferImpl.EMPTY;
+        this.buffer = EmptyBuffer.INSTANCE;
         this.pos = 0;
     }
 
