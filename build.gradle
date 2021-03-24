@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-api:0.10.8"
+    compileOnly "org.embulk:embulk-api:0.10.28"
 }
 
 tasks.withType(JavaCompile) {
