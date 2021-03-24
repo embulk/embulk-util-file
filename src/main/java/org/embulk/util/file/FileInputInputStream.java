@@ -23,7 +23,7 @@ import org.embulk.spi.FileInput;
 public class FileInputInputStream extends InputStream {
     public FileInputInputStream(final FileInput in) {
         this.pos = 0;
-        this.buffer = EmptyBuffer.INSTANCE;
+        this.buffer = EmptyBuffer.getInstance();
 
         this.in = in;
     }
@@ -112,7 +112,7 @@ public class FileInputInputStream extends InputStream {
 
     private void releaseBuffer() {
         this.buffer.release();
-        this.buffer = EmptyBuffer.INSTANCE;
+        this.buffer = EmptyBuffer.getInstance();
         this.pos = 0;
     }
 

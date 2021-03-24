@@ -86,7 +86,7 @@ public class FileOutputOutputStream extends OutputStream {
         if (this.pos > 0) {
             this.buffer.limit(this.pos);
             this.out.add(this.buffer);
-            this.buffer = EmptyBuffer.INSTANCE;
+            this.buffer = EmptyBuffer.getInstance();
             this.pos = 0;
             return true;
         }
@@ -121,7 +121,7 @@ public class FileOutputOutputStream extends OutputStream {
             default:  // Never default as all enums are listed.
         }
         this.buffer.release();
-        this.buffer = EmptyBuffer.INSTANCE;
+        this.buffer = EmptyBuffer.getInstance();
         this.pos = 0;
     }
 
