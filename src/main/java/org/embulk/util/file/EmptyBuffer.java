@@ -17,6 +17,7 @@
 package org.embulk.util.file;
 
 import org.embulk.spi.Buffer;
+import org.slf4j.LoggerFactory;
 
 final class EmptyBuffer {
     private EmptyBuffer() {}
@@ -26,7 +27,16 @@ final class EmptyBuffer {
     }
 
     private static class Holder {  // Initialization-on-demand holder idiom.
-        private static final Buffer INSTANCE = createInstance();
+        private static final Buffer INSTANCE;
+
+        static {
+            try {
+                INSTANCE = createInstance();
+            } catch (final Throwable ex) {
+                LoggerFactory.getLogger(EmptyBuffer.class).error("Failed to create an EmptyBuffer instance.", ex);
+                throw ex;
+            }
+        }
 
         private static Buffer createInstance() {
             // EmptyBufferCompat and EmptyBufferUpToDate are implemented as separate independent classes while
@@ -45,9 +55,8 @@ final class EmptyBuffer {
             // if its constructor is depending on a non-existing super-class constructor. They would never fail unless
             // the class is initialized / loaded.
             try {
-                Buffer.class.getConstructor();  // throws NoSuchMethodException if working with v0.9.
-                return new EmptyBufferUpToDate();
-            } catch (final NoSuchMethodException ex) {
+                return new EmptyBufferUpToDate();  // throws NoSuchMethodError if working with v0.9.
+            } catch (final NoSuchMethodError ex) {
                 // Pass-through.
             }
 
