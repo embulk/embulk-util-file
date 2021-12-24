@@ -23,7 +23,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-api:0.10.28"
+    compileOnly "org.embulk:embulk-api:0.10.35"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:5.8.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.8.2"
 }
 
 tasks.withType(JavaCompile) {
@@ -44,7 +46,7 @@ javadoc {
         encoding = "UTF-8"
         overview = "src/main/html/overview.html"
         links "https://docs.oracle.com/javase/8/docs/api/"
-        links "https://dev.embulk.org/embulk-api/0.10.8/javadoc/"
+        links "https://dev.embulk.org/embulk-api/0.10.35/javadoc/"
     }
 }
 
@@ -152,4 +154,17 @@ publishing {
 
 signing {
     sign publishing.publications.maven
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        outputs.upToDateWhen { false }
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+        showStandardStreams = true
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+    }
 }
