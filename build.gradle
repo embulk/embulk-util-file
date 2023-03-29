@@ -1,29 +1,21 @@
 plugins {
     id "java"
-    id "java-library"
     id "maven-publish"
     id "signing"
     id "checkstyle"
-}
-
-group = "org.embulk"
-version = "0.1.4-SNAPSHOT"
-description = "Embulk file-like byte sequence processor for Embulk plugins"
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-configurations {
-    compileClasspath.resolutionStrategy.activateDependencyLocking()
-    runtimeClasspath.resolutionStrategy.activateDependencyLocking()
 }
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    compileOnly "org.embulk:embulk-api:0.10.28"
+group = "org.embulk"
+version = "0.1.4-SNAPSHOT"
+description = "Embulk file-like byte sequence processor for Embulk plugins"
+
+configurations {
+    compileClasspath.resolutionStrategy.activateDependencyLocking()
+    runtimeClasspath.resolutionStrategy.activateDependencyLocking()
 }
 
 tasks.withType(JavaCompile) {
@@ -32,8 +24,17 @@ tasks.withType(JavaCompile) {
 }
 
 java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
     withJavadocJar()
     withSourcesJar()
+}
+
+dependencies {
+    compileOnly "org.embulk:embulk-spi:0.10.44"
+    compileOnly "org.slf4j:slf4j-api:2.0.6"
 }
 
 javadoc {
@@ -44,51 +45,33 @@ javadoc {
         encoding = "UTF-8"
         overview = "src/main/html/overview.html"
         links "https://docs.oracle.com/javase/8/docs/api/"
-        links "https://dev.embulk.org/embulk-api/0.10.8/javadoc/"
+        links "https://dev.embulk.org/embulk-spi/0.10.44/javadoc/"
     }
-}
-
-test {
-    testLogging {
-        outputs.upToDateWhen { false }
-        showStandardStreams = true
-    }
-}
-
-tasks.withType(Checkstyle) {
-    reports {
-        // Not to skip up-to-date checkstyles.
-        outputs.upToDateWhen { false }
-    }
-}
-
-checkstyle {
-    toolVersion "8.7"
-    configFile = file("${projectDir}/config/checkstyle/checkstyle.xml")
-    configProperties = [
-        "checkstyle.config.path": file("${projectDir}/config/checkstyle")
-    ]
-    ignoreFailures = false
-    maxWarnings = 0  // https://github.com/gradle/gradle/issues/881
 }
 
 jar {
-    from rootProject.file("LICENSE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 sourcesJar {
-    from rootProject.file("LICENSE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 javadocJar {
-    from rootProject.file("LICENSE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = "${project.group}"
-            artifactId = "${project.name}"
+            groupId = project.group
+            artifactId = project.name
 
             from components.java
             // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
@@ -97,8 +80,8 @@ publishing {
             pom {  // https://central.sonatype.org/pages/requirements.html
                 packaging "jar"
 
-                name = "${project.name}"
-                description = "${project.description}"
+                name = project.name
+                description = project.description
                 url = "https://www.embulk.org/"
 
                 licenses {
@@ -106,6 +89,7 @@ publishing {
                         // http://central.sonatype.org/pages/requirements.html#license-information
                         name = "The Apache License, Version 2.0"
                         url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "repo"
                     }
                 }
 
@@ -129,6 +113,17 @@ publishing {
                     developerConnection = "scm:git:git@github.com:embulk/embulk-util-file.git"
                     url = "https://github.com/embulk/embulk-util-file"
                 }
+
+                withXml {
+                    project.configurations.compileOnly.allDependencies.each { dependency ->
+                        asNode().dependencies[0].appendNode("dependency").with {
+                            it.appendNode("groupId", dependency.group)
+                            it.appendNode("artifactId", dependency.name)
+                            it.appendNode("version", dependency.version)
+                            it.appendNode("scope", "provided")
+                        }
+                    }
+                }
             }
         }
     }
@@ -151,5 +146,38 @@ publishing {
 }
 
 signing {
+    if (project.hasProperty("signingKey") && project.hasProperty("signingPassword")) {
+        logger.lifecycle("Signing with an in-memory key.")
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
     sign publishing.publications.maven
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+        showStandardStreams = true
+        outputs.upToDateWhen { false }
+    }
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        // Not to skip up-to-date checkstyles.
+        outputs.upToDateWhen { false }
+    }
+}
+
+checkstyle {
+    toolVersion "8.7"
+    configFile = file("${projectDir}/config/checkstyle/checkstyle.xml")
+    configProperties = [
+        "checkstyle.config.path": file("${projectDir}/config/checkstyle")
+    ]
+    ignoreFailures = false
+    maxWarnings = 0  // https://github.com/gradle/gradle/issues/881
 }
