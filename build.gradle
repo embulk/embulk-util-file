@@ -115,6 +115,9 @@ publishing {
                 }
 
                 withXml {
+                    if (asNode().getAt("dependencies").isEmpty()) {
+                        asNode().appendNode("dependencies")
+                    }
                     project.configurations.compileOnly.allDependencies.each { dependency ->
                         asNode().dependencies[0].appendNode("dependency").with {
                             it.appendNode("groupId", dependency.group)
