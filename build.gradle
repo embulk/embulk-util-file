@@ -33,8 +33,8 @@ java {
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-spi:0.10.44"
-    compileOnly "org.slf4j:slf4j-api:2.0.6"
+    compileOnly "org.embulk:embulk-spi:0.11"
+    compileOnly "org.slf4j:slf4j-api:2.0.7"
 }
 
 javadoc {
@@ -45,7 +45,7 @@ javadoc {
         encoding = "UTF-8"
         overview = "src/main/html/overview.html"
         links "https://docs.oracle.com/javase/8/docs/api/"
-        links "https://dev.embulk.org/embulk-spi/0.10.44/javadoc/"
+        links "https://dev.embulk.org/embulk-spi/0.11/javadoc/"
     }
 }
 
