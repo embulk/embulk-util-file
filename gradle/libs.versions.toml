@@ -1,0 +1,7 @@
+[versions]
+embulk-spi = "0.11"
+slf4j-api = "2.0.7"
+
+[libraries]
+embulk-spi = { group = "org.embulk", name = "embulk-spi", version.ref = "embulk-spi" }
+slf4j = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j-api" }
