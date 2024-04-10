@@ -1,5 +1,5 @@
-Embulk Utilities for Files
-===========================
+Embulk file-like byte sequence processor for Embulk plugins
+============================================================
 
 For Embulk plugin developers
 -----------------------------

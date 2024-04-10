@@ -66,6 +66,19 @@ javadocJar {
     }
 }
 
+// A safer and strict alternative to: "dependencies" (and "dependencies --write-locks")
+//
+// This task fails explicitly when the specified dependency is not available.
+// In contrast, "dependencies (--write-locks)" does not fail even when a part the dependencies are unavailable.
+//
+// https://docs.gradle.org/8.7/userguide/dependency_locking.html#generating_and_updating_dependency_locks
+task checkDependencies {
+    notCompatibleWithConfigurationCache("The task \"checkDependencies\" filters configurations at execution time.")
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
+}
+
 // It should not publish a `.module` file in Maven Central.
 // https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html#sub:disabling-gmm-publication
 tasks.withType(GenerateModuleMetadata) {
@@ -105,7 +118,7 @@ publishing {
                     }
                     developer {
                         name = "Dai MIKURUBE"
-                        email = "dmikurube@treasure-data.com"
+                        email = "dmikurube@acm.org"
                     }
                     developer {
                         name = "Satoshi Akama"
